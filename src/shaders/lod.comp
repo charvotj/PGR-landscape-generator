@@ -1,0 +1,67 @@
+#version 430 core
+
+layout(local_size_x = 64) in; // 64 threads
+
+struct InstanceData { mat4 model; };
+struct DrawCommand {
+    uint count;
+    uint instanceCount;
+    uint firstIndex;
+    uint baseVertex;
+    uint baseInstance;
+};
+
+// Inputs and outputs
+layout(std430, binding = 0) buffer SourceInstances { InstanceData allInstances[]; };
+layout(std430, binding = 1) buffer LOD0Instances { InstanceData lod0Out[]; };
+layout(std430, binding = 2) buffer LOD1Instances { InstanceData lod1Out[]; };
+layout(std430, binding = 3) buffer Commands { DrawCommand cmds[]; };
+
+uniform vec3 cameraPos;
+uniform float lodThreshold; // LOD0 / LOD1
+uniform uint totalCount;    // Total tree count in input buffer
+
+uniform vec4 frustumPlanes[6];
+uniform float treeRadius = 0.02;
+uniform bool useFrustumCulling = false;
+
+
+bool isInsideFrustum(vec3 pos, float radius) {
+    for (int i = 0; i < 6; i++) {
+        // check sphere agains planes - radius make sphere from point
+        if (dot(frustumPlanes[i].xyz, pos) + frustumPlanes[i].w < -radius) {
+            return false; // whole sphere is outside one of the frustum planes 
+        }
+    }
+    return true;
+}
+
+void main() {
+    uint idx = gl_GlobalInvocationID.x;
+    if (idx >= totalCount) return;
+
+    InstanceData data = allInstances[idx];
+    vec3 pos = data.model[3].xyz;
+    pos.y += 0.01;
+
+    // --- FRUSTUM CULLING ---
+    if (useFrustumCulling && !isInsideFrustum(pos, treeRadius)) {
+        return;
+    }
+    
+    // Extract position pro instance model matrix
+    // Ignore Z axis (Y in opengl)
+    vec2 pos2D = data.model[3].xz;
+    vec2 camPos2D = cameraPos.xz;
+    float dist = distance(pos2D, camPos2D);
+
+    if (dist < lodThreshold) {
+        // LOD 0 - 3D Model
+        uint outIdx = atomicAdd(cmds[0].instanceCount, 1);
+        lod0Out[outIdx] = data;
+    } else {
+        // LOD 1 - Billboard
+        uint outIdx = atomicAdd(cmds[1].instanceCount, 1);
+        lod1Out[outIdx] = data;
+    }
+}

@@ -1,0 +1,23 @@
+# Blender 4.0.2 MTL File: 'picea.blend'
+# www.blender.org
+
+newmtl Tree_Bark
+Ka 1.000000 1.000000 1.000000
+Ks 0.500000 0.500000 0.500000
+Ke 0.000000 0.000000 0.000000
+Ni 1.330000
+d 1.000000
+illum 2
+map_Kd bark01_BaseColor.jpg
+map_Ns bark01_Roughness.jpg
+map_Bump -bm 1.000000 bark01_Normal.jpg
+
+newmtl leaves
+Ns 250.000000
+Ka 1.000000 1.000000 1.000000
+Kd 0.018389 0.073800 0.007232
+Ks 0.500000 0.500000 0.500000
+Ke 0.000000 0.000000 0.000000
+Ni 1.450000
+d 1.000000
+illum 2
